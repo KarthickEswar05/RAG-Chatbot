@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG Chatbot</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>RAG Chatbot</h1>
+      <section class="card">
+        <h2>1. Upload Document</h2>
+        <form id="upload-form">
+          <input type="file" id="document" name="document" />
+          <button type="submit">Upload</button>
+        </form>
+        <div id="upload-message" class="message"></div>
+      </section>
+
+      <section class="card">
+        <h2>2. Chat with Document</h2>
+        <div id="chat-window" class="chat-window"></div>
+        <form id="chat-form">
+          <input type="text" id="question" placeholder="Ask a question..." autocomplete="off" />
+          <button type="submit">Send</button>
+        </form>
+      </section>
+    </div>
+
+    <script>
+      const uploadForm = document.getElementById("upload-form");
+      const uploadMessage = document.getElementById("upload-message");
+      const chatForm = document.getElementById("chat-form");
+      const chatWindow = document.getElementById("chat-window");
+
+      uploadForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        uploadMessage.textContent = "Uploading...";
+
+        const formData = new FormData();
+        const fileInput = document.getElementById("document");
+        if (!fileInput.files.length) {
+          uploadMessage.textContent = "Please select a document.";
+          return;
+        }
+        formData.append("document", fileInput.files[0]);
+
+        const response = await fetch("/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          uploadMessage.textContent = data.message;
+        } else {
+          uploadMessage.textContent = data.error || "Upload failed.";
+        }
+      });
+
+      chatForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const questionInput = document.getElementById("question");
+        const question = questionInput.value.trim();
+        if (!question) return;
+
+        appendMessage("You", question);
+        questionInput.value = "";
+
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          appendMessage("Bot", data.answer);
+        } else {
+          appendMessage("Error", data.error || "Sorry, something went wrong.");
+        }
+      });
+
+      function appendMessage(sender, text) {
+        const message = document.createElement("div");
+        message.className = "chat-message";
+        message.innerHTML = `<strong>${sender}:</strong> <span>${text}</span>`;
+        chatWindow.appendChild(message);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      }
+    </script>
+  </body>
+</html>
